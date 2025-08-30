@@ -1,18 +1,2 @@
-pandas 
-numpy 
-seaborn
-matplotlib
-selenium
-tqdm
-bs4
-regex
-docx
-nltk
-spacy
-python-docx
-scikit-learn
-ftfy
-PyPDF2
-pyresparser
-streamlit
--e .
+Flask==2.3.5
+psycopg2-binary==2.9.9
