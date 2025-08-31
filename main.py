@@ -22,10 +22,10 @@ def match_candidate(job, candidate):
 
 @app.route('/matches/<int:job_id>')
 def get_matches(job_id):
-    cursor.execute("SELECT * FROM jobs WHERE id=%s;", (job_id,))
-    job = cursor.fetchone()
-    cursor.execute("SELECT * FROM candidates;")
-    candidates = cursor.fetchall()
+    cursor.execute("SELECT * FROM candidates WHERE id=%s;", (job_id,))
+    candidate = cursor.fetchone()
+    cursor.execute("SELECT * FROM jobs;")
+    jobs = cursor.fetchall()
     ranked = sorted(candidates, key=lambda c: match_candidate(job, c), reverse=True)
     results = []
     for c in ranked:
