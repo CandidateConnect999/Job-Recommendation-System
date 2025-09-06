@@ -4,8 +4,11 @@ from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-conn = psycopg2.connect(os.environ['DATABASE_URL'])
-cursor = conn.cursor()
+# Connect to database (only if DATABASE_URL is set)
+DATABASE_URL = os.environ.get("DATABASE_URL")
+conn = psycopg2.connect(DATABASE_URL) if DATABASE_URL else None
+cursor = conn.cursor() if conn else None
+
 
 def match_candidate(job, candidate):
     score = 0
@@ -20,24 +23,39 @@ def match_candidate(job, candidate):
         score += 1
     return score
 
-@app.route('/matches/<int:job_id>')
-def get_matches(job_id):
-    cursor.execute("SELECT * FROM candidates WHERE id=%s;", (job_id,))
+
+@app.route("/matches/<int:candidate_id>")
+def get_matches(candidate_id):
+    if not cursor:
+        return jsonify({"error": "Database not connected"}), 500
+
+    # Get candidate by id
+    cursor.execute("SELECT * FROM candidates WHERE id=%s;", (candidate_id,))
     candidate = cursor.fetchone()
+
+    if not candidate:
+        return jsonify({"error": "Candidate not found"}), 404
+
+    # Get all jobs
     cursor.execute("SELECT * FROM jobs;")
     jobs = cursor.fetchall()
-    ranked = sorted(candidates, key=lambda c: match_candidate(job, c), reverse=True)
+
+    # Rank jobs against candidate
+    ranked = sorted(jobs, key=lambda j: match_candidate(j, candidate), reverse=True)
+
     results = []
-    for c in ranked:
+    for j in ranked:
         results.append({
-            'id': c[0],
-            'name': c[1],
-            'skills': c[2],
-            'location': c[3],
-            'experience': c[4],
-            'salary_expectation': c[5]
+            "id": j[0],
+            "title": j[1],
+            "skills": j[2],
+            "location": j[3],
+            "experience_required": j[4],
+            "salary_offered": j[5]
         })
     return jsonify(results)
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
