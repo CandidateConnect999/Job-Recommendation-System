@@ -1,14 +1,18 @@
-import os
-import psycopg2
 from flask import Flask, jsonify
+import os
 
 app = Flask(__name__)
 
-# Connect to database (only if DATABASE_URL is set)
-DATABASE_URL = os.environ.get("DATABASE_URL")
-conn = psycopg2.connect(DATABASE_URL) if DATABASE_URL else None
-cursor = conn.cursor() if conn else None
+# fake test data
+fake_candidates = [
+    (1, "Alice", ["Python", "SQL"], "Boston", 3, 70000),
+    (2, "Bob", ["JavaScript", "React"], "NYC", 2, 60000),
+]
 
+fake_jobs = [
+    (1, "Backend Developer", ["Python", "Flask"], "Boston", 2, 80000),
+    (2, "Frontend Developer", ["JavaScript", "React"], "NYC", 1, 65000),
+]
 
 def match_candidate(job, candidate):
     score = 0
@@ -23,26 +27,13 @@ def match_candidate(job, candidate):
         score += 1
     return score
 
-
 @app.route("/matches/<int:candidate_id>")
 def get_matches(candidate_id):
-    if not cursor:
-        return jsonify({"error": "Database not connected"}), 500
-
-    # Get candidate by id
-    cursor.execute("SELECT * FROM candidates WHERE id=%s;", (candidate_id,))
-    candidate = cursor.fetchone()
-
+    candidate = next((c for c in fake_candidates if c[0] == candidate_id), None)
     if not candidate:
         return jsonify({"error": "Candidate not found"}), 404
 
-    # Get all jobs
-    cursor.execute("SELECT * FROM jobs;")
-    jobs = cursor.fetchall()
-
-    # Rank jobs against candidate
-    ranked = sorted(jobs, key=lambda j: match_candidate(j, candidate), reverse=True)
-
+    ranked = sorted(fake_jobs, key=lambda j: match_candidate(j, candidate), reverse=True)
     results = []
     for j in ranked:
         results.append({
@@ -55,6 +46,9 @@ def get_matches(candidate_id):
         })
     return jsonify(results)
 
+@app.route("/")
+def home():
+    return "Teste"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
