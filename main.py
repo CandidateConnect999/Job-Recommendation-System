@@ -1,87 +1,84 @@
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-import os
 
 app = Flask(__name__)
 CORS(app)
 
-# -----------------------------
-# Fake Test Data
-# -----------------------------
-
-fake_candidates = [
-    (1, "Alice", ["Python", "SQL"], "Boston", 3, 70000),
-    (2, "Bob", ["JavaScript", "React"], "NYC", 2, 60000),
-]
-
-fake_jobs = [
-    (1, "Backend Developer", ["Python", "Flask"], "Boston", 2, 80000),
-    (2, "Frontend Developer", ["JavaScript", "React"], "NYC", 1, 65000),
-]
-
-# -----------------------------
-# Matching Algorithm
-# -----------------------------
-
-def match_candidate(job, candidate):
-    score = 0
-
-    # Skill match
-    for skill in job[2]:
-        if skill in candidate[2]:
-            score += 2
-
-    # Location match
-    if job[3] == candidate[3]:
-        score += 1
-
-    # Experience match
-    if candidate[4] >= job[4]:
-        score += 1
-
-    # Salary match
-    if candidate[5] <= job[5]:
-        score += 1
-
-    return score
-
-
-# -----------------------------
-# API Routes
-# -----------------------------
-
+# Home route (test if API is alive)
 @app.route("/")
 def home():
     return "Job Matching API is running!"
 
-@app.route("/matches/<int:candidate_id>")
-def get_matches(candidate_id):
+# Job recommendation route
+@app.route("/recommendations", methods=["POST"])
+def recommendations():
+    data = request.get_json()
 
-    candidate = next((c for c in fake_candidates if c[0] == candidate_id), None)
+    if not data:
+        return jsonify({"error": "No JSON received"}), 400
 
-    if not candidate:
-        return jsonify({"error": "Candidate not found"}), 404
+    # Get candidate data
+    skills = data.get("skills", [])
+    location = data.get("location", "")
+    experience = data.get("experience", 0)
+    salary = data.get("salary", 0)
 
-    results = []
+    # Dummy job database (you can replace later)
+    jobs = [
+        {
+            "title": "Frontend Developer",
+            "skills": ["JavaScript", "React"],
+            "location": "NYC",
+            "experience": 2,
+            "salary": 70000
+        },
+        {
+            "title": "Backend Developer",
+            "skills": ["Python", "Flask"],
+            "location": "Remote",
+            "experience": 3,
+            "salary": 80000
+        },
+        {
+            "title": "Full Stack Developer",
+            "skills": ["JavaScript", "React", "Python"],
+            "location": "NYC",
+            "experience": 2,
+            "salary": 90000
+        }
+    ]
 
-    for job in fake_jobs:
-        score = match_candidate(job, candidate)
-        results.append({
-            "job_id": job[0],
-            "title": job[1],
-            "location": job[3],
-            "salary": job[5],
-            "match_score": score
-        })
+    matched_jobs = []
 
-    results.sort(key=lambda x: x["match_score"], reverse=True)
+    for job in jobs:
+        score = 0
 
-    return jsonify(results)
+        # Skill match
+        for skill in skills:
+            if skill in job["skills"]:
+                score += 1
 
+        # Location match
+        if location == job["location"]:
+            score += 2
 
-# -----------------------------
-# Run App
-# -----------------------------
+        # Experience match
+        if experience >= job["experience"]:
+            score += 1
+
+        # Salary match
+        if salary <= job["salary"]:
+            score += 1
+
+        job_copy = job.copy()
+        job_copy["match_score"] = score
+        matched_jobs.append(job_copy)
+
+    # Sort by best match
+    matched_jobs.sort(key=lambda x: x["match_score"], reverse=True)
+
+    return jsonify(matched_jobs)
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=5000)
